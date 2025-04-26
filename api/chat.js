@@ -1,69 +1,60 @@
-// api/chat.js  ── Node-runtime on Vercel
+import { json } from 'micro';      // <— already installed in Vercel
 import OpenAI from 'openai';
 
-/** GitHub-Pages origin that’s allowed to call this API */
 const ORIGIN = 'https://western-visayas-driving-institute.github.io';
-
-/** Utility: set common CORS headers */
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+// Disable the default bodyParser so we can read raw stream
+export const config = { api: { bodyParser: false } };
+
 export default async function handler(req, res) {
-  /* ---------- 1. CORS PRE-FLIGHT ---------- */
+  /* ---- OPTIONS (pre-flight) ---- */
   if (req.method === 'OPTIONS') {
     setCors(res);
-    return res.status(204).end(); // ✅ tell the browser “OK, go ahead”
+    return res.status(204).end();
   }
 
-  /* ---------- 2. REJECT OTHER VERBS ---------- */
+  /* ---- Only allow POST ---- */
   if (req.method !== 'POST') {
     setCors(res);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  /* ---------- 3. HANDLE THE ACTUAL POST ---------- */
-  setCors(res);                       // must be on the real response too
+  setCors(res);
 
-  const { message, history, language } = req.body || {};
+  /* ---- Parse JSON body safely ---- */
+  let payload = {};
+  try {
+    payload = await json(req);           // <— parses the stream
+  } catch (err) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+
+  const { message = '', history = [] } = payload;
+  if (!message.trim()) {
+    return res.status(400).json({ error: 'Message text is required' });
+  }
+
+  /* ---- OpenAI ---- */
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'OpenAI API key not set' });
+    return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
   }
 
   try {
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',          // ← use any model you like
+      model: 'gpt-3.5-turbo',        // or gpt-4o-mini etc.
       messages: [
-        {
-          role: 'system',
-          content: `You are DriveBot, the helpful, friendly assistant for Western Visayas Driving Institute (WVDI).
-
-Branches:
-- Bacolod: 4/F Space #4007 Ayala Malls Capitol Central, Gatuslao St. Bacolod City
-- Kabankalan: Cor. Guanzon & Rizal Sts., Kabankalan City, Negros Occidental
-- Dumaguete: Capitol Area, Taclobo, Dumaguete City, Negros Oriental
-
-Contact:
-- Phone: (034) 435-5803
-- Email: info@wvdi.ph
-- Opening hours: Mondays to Saturdays, 8:00 AM – 6:00 PM
-
-Services:
-- Theoretical Driving Course (TDC)
-- Practical Driving Course (PDC)
-- Student-permit assistance
-- Driver-license application & renewal
-
-You always answer in the user’s language and help with course info, enrollment, schedules, and general WVDI questions.`,
-        },
-        ...(history || []),
-        { role: 'user', content: message },
+        { role: 'system', content: 'You are DriveBot …' },
+        ...history,
+        { role: 'user', content: message }
       ],
-      temperature: 0.7,
+      temperature: 0.7
     });
 
     return res
@@ -73,6 +64,6 @@ You always answer in the user’s language and help with course info, enrollment
     console.error('OpenAI error:', err);
     return res
       .status(500)
-      .json({ error: err?.message || 'Error processing your request' });
+      .json({ error: err?.message || 'OpenAI request failed' });
   }
 }

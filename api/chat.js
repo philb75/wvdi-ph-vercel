@@ -1,5 +1,6 @@
 import { json } from 'micro';      // <— already installed in Vercel
 import OpenAI from 'openai';
+import { readFile } from 'fs/promises';
 
 const ORIGIN = 'https://western-visayas-driving-institute.github.io';
 function setCors(res) {
@@ -46,11 +47,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    const instructions = await readFile(new URL('./drivebot_instructions.txt', import.meta.url), 'utf8');
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',        // or gpt-4o-mini etc.
+      model: 'gpt-4o-mini',        // updated from gpt-3.5-turbo
       messages: [
-        { role: 'system', content: 'You are DriveBot …' },
+        { role: 'system', content: instructions },
         ...history,
         { role: 'user', content: message }
       ],

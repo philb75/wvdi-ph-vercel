@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "public"
+
+[functions]
+  directory = "api"
+  node_bundler = "esbuild"
+
+[dev]
+  port = 8888
+  
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

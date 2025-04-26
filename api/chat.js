@@ -1,4 +1,4 @@
-import { OpenAIApi, Configuration } from 'openai';
+import OpenAI from 'openai';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,15 +14,32 @@ export default async function handler(req, res) {
     return;
   }
 
-  const configuration = new Configuration({ apiKey });
-  const openai = new OpenAIApi(configuration);
+  const openai = new OpenAI({ apiKey });
 
   // System prompt with WVDI info
-  const systemPrompt = `You are DriveBot, the helpful, friendly assistant for Western Visayas Driving Institute (WVDI).\n\nBranches:\n- Bacolod: 4/F Space #4007 Ayala Malls Capitol Central, Gatuslao St. Bacolod City\n- Kabankalan: [address]\n- Dumaguete: Capitol Area, Taclobo, Dumaguete City, Negros Oriental\n\nContact:\n- Phone: (034) 435-5803\n- Email: [add email]\n- Opening hours: Mondays to Saturdays, 8:00 AM to 6:00 PM\n\nYou answer in the same language as the user. You help users with course info, enrollment, schedules, and general questions about WVDI.`;
+  const systemPrompt = `You are DriveBot, the helpful, friendly assistant for Western Visayas Driving Institute (WVDI).
+
+Branches:
+- Bacolod: 4/F Space #4007 Ayala Malls Capitol Central, Gatuslao St. Bacolod City
+- Kabankalan: Cor. Guanzon & Rizal Sts., Kabankalan City, Negros Occidental
+- Dumaguete: Capitol Area, Taclobo, Dumaguete City, Negros Oriental
+
+Contact:
+- Phone: (034) 435-5803
+- Email: info@wvdi.ph
+- Opening hours: Mondays to Saturdays, 8:00 AM to 6:00 PM
+
+Services:
+- Theoretical Driving Course (TDC)
+- Practical Driving Course (PDC)
+- Student Permit Application Assistance
+- Driver's License Application and Renewal Support
+
+You answer in the same language as the user. You help users with course info, enrollment, schedules, and general questions about WVDI.`;
 
   try {
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         ...(history || []),
@@ -30,8 +47,9 @@ export default async function handler(req, res) {
       ],
       temperature: 0.7,
     });
-    res.status(200).json({ reply: completion.data.choices[0].message.content });
+    res.status(200).json({ reply: completion.choices[0].message.content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('OpenAI API error:', error);
+    res.status(500).json({ error: error.message || 'Error processing your request' });
   }
 }

@@ -3,14 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["chatbot", "openai", "facebook", "messenger", "wvdi"],
+  "author": "Philippe Barthelemy",
   "license": "ISC",
-  "description": "",
+  "description": "Server-side API for the WVDI Facebook Messenger OpenAI chatbot integration",
   "dependencies": {
     "cors": "^2.8.5",
     "openai": "^4.95.1"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
   }
 }
